@@ -1,0 +1,1 @@
+/home/bernardn/Code/portfolio/social-stream/backend/media-compression-service/target/debug/media-compresssion-service: /home/bernardn/Code/portfolio/social-stream/backend/media-compression-service/src/main.rs
