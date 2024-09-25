@@ -8,17 +8,17 @@ import (
 )
 
 type App struct {
-	router *router.Router
+	Router *router.Router
 }
 
 func NewApp() *App {
 	hanlder := handler.NewHandler()
 	router := router.NewRouter(hanlder)
 	return &App{
-		router: router,
+		Router: router,
 	}
 }
 
 func (a *App) Run() error {
-	return http.ListenAndServe(":8080", a.router.R)
+	return http.ListenAndServe(":8080", a.Router.R)
 }
