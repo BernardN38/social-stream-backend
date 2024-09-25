@@ -1,0 +1,38 @@
+services:
+  nginx:
+    image: nginx:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+
+    restart: always
+    volumes:
+      - ./nginx:/etc/nginx/
+    ports:
+      # - "443:443"
+      - "8081:8080"
+    # - "8443:8443"
+    depends_on:
+      - auth-service
+
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: ./Dockerfile
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/health" ]
+      interval: 60s # Time between health checks
+      timeout: 10s # Timeout for a single health check
+      retries: 3
