@@ -12,5 +12,4 @@ type RegisterUserPayload struct {
 type LoginUserPayload struct {
 	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
-	Username string `json:"username" validate:"required"`
 }

@@ -20,8 +20,8 @@ type Handler struct {
 	service *service.Service
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(s *service.Service) *Handler {
+	return &Handler{service: s}
 }
 func (h *Handler) CheckHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("auth service up and running"))
@@ -42,7 +42,7 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = h.service.RegisterUser(registerUserPayload)
+	err = h.service.RegisterUser(r.Context(), registerUserPayload)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -65,7 +65,7 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	userId, err := h.service.LoginUser(loginUserPayload)
+	userId, err := h.service.LoginUser(r.Context(), loginUserPayload)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)

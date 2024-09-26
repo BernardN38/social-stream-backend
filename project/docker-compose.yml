@@ -1,3 +1,7 @@
+volumes:
+  postgres_data:
+    driver: local
+
 services:
   nginx:
     image: nginx:latest
@@ -18,6 +22,38 @@ services:
     # - "8443:8443"
     depends_on:
       - auth-service
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: bernardn
+      POSTGRES_PASSWORD: password
+      PGUSER: bernardn
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    restart: always
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     build:
@@ -31,8 +67,15 @@ services:
         limits:
           cpus: "0.50"
           memory: 256M
+    environment:
+      postgresDsn: "user=bernardn password=password host=postgres  port=5432 sslmode=disable"
+      jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
+      port: ":8080"
+      dbName: "auth_service"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/auth/health" ]
       interval: 60s # Time between health checks
       timeout: 10s # Timeout for a single health check
       retries: 3
+    depends_on:
+      - postgres
