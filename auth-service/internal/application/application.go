@@ -10,6 +10,7 @@ import (
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/handler"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/router"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/service"
+	"github.com/go-chi/jwtauth/v5"
 	_ "github.com/lib/pq"
 )
 
@@ -55,7 +56,8 @@ func NewApp() *App {
 	service := service.NewService(db)
 
 	//create request handler
-	hanlder := handler.NewHandler(service)
+	jwtAuth := jwtauth.New("HS512", []byte(config.JwtSecret), nil)
+	hanlder := handler.NewHandler(service, jwtAuth)
 
 	//create request router
 	router := router.NewRouter(hanlder)
