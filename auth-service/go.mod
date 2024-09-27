@@ -2,7 +2,10 @@ module github.com/BernardN38/social-stream-backend/auth-service
 
 go 1.23.1
 
-require github.com/stretchr/testify v1.9.0
+require (
+	github.com/go-playground/assert/v2 v2.2.0
+	github.com/stretchr/testify v1.9.0
+)
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
@@ -16,6 +19,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 )
@@ -32,7 +36,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pressly/goose/v3 v3.22.1
-	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/crypto v0.27.0
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
