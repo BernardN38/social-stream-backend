@@ -8,6 +8,7 @@ import (
 
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/models"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/service"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -17,11 +18,15 @@ type HandlerInterface interface {
 	LoginUser(w http.ResponseWriter, r *http.Request)
 }
 type Handler struct {
-	service *service.Service
+	Service      service.ServiceInterface
+	TokenManager *TokenManager
 }
 
-func NewHandler(s *service.Service) *Handler {
-	return &Handler{service: s}
+func NewHandler(s *service.Service, jwtAuth *jwtauth.JWTAuth) *Handler {
+	tm := NewTokenManger(jwtAuth)
+	return &Handler{
+		Service:      s,
+		TokenManager: tm}
 }
 func (h *Handler) CheckHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("auth service up and running"))
@@ -42,7 +47,7 @@ func (h *Handler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = h.service.RegisterUser(r.Context(), registerUserPayload)
+	err = h.Service.RegisterUser(r.Context(), registerUserPayload)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -65,11 +70,19 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	userId, err := h.service.LoginUser(r.Context(), loginUserPayload)
+	userId, err := h.Service.LoginUser(r.Context(), loginUserPayload)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	tokenString, err := h.TokenManager.CreateToken(userId)
+	if err != nil {
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+	cookie := CreateJWTCookie(tokenString)
+	http.SetCookie(w, cookie)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("%v", userId)))
 }
