@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/BernardN38/ebuy-server/authentication-service/messaging"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/models"
-	"github.com/BernardN38/social-stream-backend/auth-service/messaging"
+
 	users_sql "github.com/BernardN38/social-stream-backend/auth-service/sqlc/users"
 	"golang.org/x/crypto/bcrypt"
 )
