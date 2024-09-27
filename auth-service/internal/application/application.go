@@ -10,8 +10,10 @@ import (
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/handler"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/router"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/service"
+	"github.com/BernardN38/social-stream-backend/auth-service/messaging"
 	"github.com/go-chi/jwtauth/v5"
 	_ "github.com/lib/pq"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 //go:embed migrations/*.sql
@@ -51,9 +53,24 @@ func NewApp() *App {
 		log.Fatalln("unable to run database migrations:", err)
 		return nil
 	}
-
+	conn, err := amqp.Dial(config.RabbitmqURL)
+	if err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+	err = initExchangesAndQueues(conn)
+	if err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+	channel, err := conn.Channel()
+	if err != nil {
+		log.Fatalln(err)
+		return nil
+	}
+	rabbitmqEmitter := messaging.New(channel)
 	//start service layer
-	service := service.NewService(db)
+	service := service.NewService(db, rabbitmqEmitter)
 
 	//create request handler
 	jwtAuth := jwtauth.New("HS512", []byte(config.JwtSecret), nil)
@@ -67,6 +84,7 @@ func NewApp() *App {
 }
 
 func (a *App) Run() error {
+	log.Println("listening on port 8080")
 	return http.ListenAndServe(":8080", a.Router.R)
 }
 
@@ -105,4 +123,33 @@ func createDatabaseIfNotExists(db *sql.DB, dbName string) error {
 	}
 
 	return err
+}
+
+type ExchangeQueueDeclaration struct {
+	exchangeName string
+	exchangeType string
+	queueName    string
+	routingKey   string
+}
+
+func initExchangesAndQueues(conn *amqp.Connection) error {
+	channel, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+	declarations := []ExchangeQueueDeclaration{
+		{
+			exchangeName: "user_events",
+			exchangeType: "topic",
+			queueName:    "user_updates",
+			routingKey:   "user.#",
+		},
+	}
+	for _, v := range declarations {
+		err := messaging.DeclareExchangeAndQueue(channel, v.exchangeName, v.exchangeType, v.queueName, v.routingKey)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
