@@ -3,6 +3,7 @@ module github.com/BernardN38/social-stream-backend/auth-service
 go 1.23.1
 
 require (
+	github.com/BernardN38/ebuy-server/authentication-service v0.0.0-20240229015724-aec053a8b169
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/stretchr/testify v1.9.0
 )
@@ -17,6 +18,7 @@ require (
 	github.com/lestrrat-go/jwx/v2 v2.0.20 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
+	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
