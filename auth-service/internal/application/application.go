@@ -7,10 +7,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/BernardN38/ebuy-server/authentication-service/messaging"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/handler"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/router"
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/service"
-	"github.com/BernardN38/social-stream-backend/auth-service/messaging"
+
 	"github.com/go-chi/jwtauth/v5"
 	_ "github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
