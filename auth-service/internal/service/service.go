@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/BernardN38/social-stream-backend/auth-service/internal/models"
+	"github.com/BernardN38/social-stream-backend/auth-service/messaging"
 	users_sql "github.com/BernardN38/social-stream-backend/auth-service/sqlc/users"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,15 +17,17 @@ type ServiceInterface interface {
 	LoginUser(ctx context.Context, payload models.LoginUserPayload) (int, error)
 }
 type Service struct {
-	db          *sql.DB
-	userQueries users_sql.Queries
+	db              *sql.DB
+	userQueries     users_sql.Queries
+	rabbitmqEmitter messaging.MessageEmitter
 }
 
-func NewService(db *sql.DB) *Service {
+func NewService(db *sql.DB, rabbitmqEmitter messaging.MessageEmitter) *Service {
 	userQueries := users_sql.New(db)
 	return &Service{
-		db:          db,
-		userQueries: *userQueries,
+		db:              db,
+		userQueries:     *userQueries,
+		rabbitmqEmitter: rabbitmqEmitter,
 	}
 }
 func (s *Service) RegisterUser(ctx context.Context, payload models.RegisterUserPayload) error {
@@ -42,6 +46,22 @@ func (s *Service) RegisterUser(ctx context.Context, payload models.RegisterUserP
 			Email:           payload.Email,
 			EncodedPassword: string(encodedPassword),
 		})
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		msg, err := json.Marshal(messaging.CreateUserMessage{
+			FirstName: payload.FirstName,
+			LastName:  payload.LastName,
+			Username:  payload.Username,
+			Email:     payload.Email,
+			Dob:       payload.DOB,
+		})
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		err = s.rabbitmqEmitter.SendMessage(timeoutCtx, msg, "user_events", "user.created", "created")
 		if err != nil {
 			errorCh <- err
 			return
