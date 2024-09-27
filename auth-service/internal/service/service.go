@@ -10,6 +10,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type ServiceInterface interface {
+	RegisterUser(ctx context.Context, payload models.RegisterUserPayload) error
+	LoginUser(ctx context.Context, payload models.LoginUserPayload) (int, error)
+}
 type Service struct {
 	db          *sql.DB
 	userQueries users_sql.Queries
