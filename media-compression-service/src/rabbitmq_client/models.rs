@@ -23,3 +23,16 @@ impl Into<Vec<u8>> for MediaUploadedMessage {
         serde_json::to_vec(&self).unwrap()
     }
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MediaCompressedMessage {
+    pub id: String,
+    pub compressed_id: String,
+    pub status: String,
+}
+
+impl Into<Vec<u8>> for MediaCompressedMessage {
+    fn into(self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap()
+    }
+}

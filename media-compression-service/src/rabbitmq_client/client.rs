@@ -14,7 +14,7 @@ use std::{
 use tokio::time::sleep;
 use turbojpeg::{PixelFormat, Subsamp};
 
-use crate::rabbitmq_client::models::MediaUploadedMessage;
+use crate::rabbitmq_client::models::{MediaCompressedMessage, MediaUploadedMessage};
 
 #[derive(Clone)]
 pub struct RabbitmqClient {
@@ -263,7 +263,28 @@ impl AsyncConsumer for CustomConsumer {
                             .send()
                             .await
                         {
-                            Ok(_) => info!("Image successfully compressed and uploaded"),
+                            Ok(_) => {
+                                info!("Image successfully compressed and uploaded");
+                                let publish_result = channel
+                                    .basic_publish(
+                                        BasicProperties::default(),
+                                        MediaCompressedMessage {
+                                            id: data.id,
+                                            compressed_id: data.compressed_id,
+                                            status: "compressed".to_string(),
+                                        }
+                                        .into(),
+                                        BasicPublishArguments::default()
+                                            .exchange("media_events".to_string())
+                                            .routing_key("media.compressed".to_string())
+                                            .finish(),
+                                    )
+                                    .await;
+                                match publish_result {
+                                    Ok(sucess) => return,
+                                    Err(e) => error!("{}", e.to_string()),
+                                }
+                            }
                             Err(e) => error!("Failed to upload compressed image: {}", e),
                         }
                     }

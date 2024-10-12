@@ -1,8 +1,11 @@
 package messaging
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 
+	"github.com/BernardN38/social-stream-backend/user-service/internal/models"
 	"github.com/BernardN38/social-stream-backend/user-service/internal/service"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -101,8 +104,24 @@ func (r *RabbitmqReceiver) ListenForMessages() error {
 	go func() {
 		for msg := range msgs {
 			switch msg.RoutingKey {
-			case "media.compressed":
-				log.Println("compressed")
+			case "user.created":
+				log.Println("user created message received")
+				var payload models.CreateUserPayload
+				err := json.Unmarshal(msg.Body, &payload)
+				if err != nil {
+					log.Println("error unmarshaling message", string(msg.Body))
+					continue
+				}
+				err = r.service.CreateUser(context.Background(), models.CreateUserPayload{
+					Username:  payload.Username,
+					Email:     payload.Email,
+					FirstName: payload.FirstName,
+					LastName:  payload.LastName,
+					Dob:       payload.Dob,
+				})
+				if err != nil {
+					log.Println("error creating user", string(msg.Body))
+				}
 			default:
 				log.Printf("Received message: %s", msg.Body)
 			}

@@ -10,15 +10,17 @@ use amqprs::{
     BasicProperties, Deliver,
 };
 use core::fmt;
+use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use std::{
     f32::consts::E,
     fmt::{Debug, Formatter},
 };
 
-use crate::rabbitmq_client::models::MediaUploadedMessage;
+use crate::{rabbitmq_client::models::MediaUploadedMessage, service};
 #[derive(Clone)]
 pub struct RabbitmqClient {
-    connection: Connection,
+    pub connection: Connection,
     channel: Channel,
     config: RabbitmqConfig,
 }
@@ -88,13 +90,15 @@ impl RabbitmqClient {
     }
 }
 
-pub struct CustomConsumer {}
+pub struct CustomConsumer {
+    pub db_conn: DatabaseConnection,
+}
 impl AsyncConsumer for CustomConsumer {
     fn consume<'life0, 'life1, 'async_trait>(
         &'life0 mut self,
         channel: &'life1 Channel,
         deliver: Deliver,
-        basic_properties: BasicProperties,
+        _basic_properties: BasicProperties,
         content: Vec<u8>,
     ) -> ::core::pin::Pin<
         Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send + 'async_trait>,
@@ -105,22 +109,30 @@ impl AsyncConsumer for CustomConsumer {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            // Process the message content
-            let msg = serde_json::from_slice(&content);
-            let msg = match msg {
-                Ok(m) => m,
-                Err(e) => {
-                    let _ = channel
-                        .basic_reject(BasicRejectArguments::new(deliver.delivery_tag(), false))
-                        .await;
-                    println!("{:?}", e);
-                    return;
+            match deliver.routing_key().as_str() {
+                "media.compressed" => {
+                    // Process the message content
+                    let msg: Result<MediaCompressedMessage, serde_json::Error> =
+                        serde_json::from_slice(&content);
+                    match msg {
+                        Ok(m) => {
+                            let _ = service::Mutation::update_user_media_by_id(
+                                &self.db_conn,
+                                &m.id,
+                                "compressed".to_string(),
+                            )
+                            .await;
+                            println!("{:?}", m);
+                        }
+                        Err(e) => {
+                            println!("{:?}", e);
+                        }
+                    };
                 }
-            };
-            // msg.await;
-            // println!("Received message: {:?}", data);
-
-            // Acknowledge the message (depending on your use case)
+                _ => {
+                    println!("Received message: {:?}", String::from_utf8(content));
+                }
+            }
             if let Err(err) = channel
                 .basic_ack(BasicAckArguments::new(deliver.delivery_tag(), false))
                 .await
@@ -128,5 +140,21 @@ impl AsyncConsumer for CustomConsumer {
                 eprintln!("Failed to ack message: {:?}", err);
             }
         })
+    }
+}
+
+enum MessageKey {
+    MediaCompressed(String),
+}
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MediaCompressedMessage {
+    pub id: String,
+    pub compressed_id: String,
+    pub status: String,
+}
+
+impl Into<Vec<u8>> for MediaCompressedMessage {
+    fn into(self) -> Vec<u8> {
+        serde_json::to_vec(&self).unwrap()
     }
 }

@@ -7,7 +7,12 @@ use axum::{
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{jwt::jwt::Claims, rabbitmq_client::models::MediaUploadedMessage, AppState};
+use crate::{
+    entity::user_media::{self, MediaStatus},
+    jwt::jwt::Claims,
+    rabbitmq_client::models::MediaUploadedMessage,
+    service, AppState,
+};
 #[derive(Serialize)]
 pub struct Message {
     pub message: String,
@@ -76,7 +81,7 @@ pub async fn upload_media(
         return Err(UploadError("Missing description".into()));
     }
 
-    let id = Uuid::new_v4();
+    let id_full = Uuid::new_v4();
     let compressed_id = Uuid::new_v4();
     match image_file {
         Some(img) => {
@@ -85,7 +90,7 @@ pub async fn upload_media(
                 .s3_client
                 .put_object()
                 .bucket("media-service")
-                .key(id)
+                .key(id_full)
                 .body(img.into())
                 .set_content_type(Some("application/jpeg".to_string()))
                 .send()
@@ -96,10 +101,25 @@ pub async fn upload_media(
                     let _ = state
                         .rabbitmq_client
                         .send_message(MediaUploadedMessage {
-                            id: id.to_string(),
+                            id: id_full.to_string(),
                             compressed_id: compressed_id.to_string(),
                         })
                         .await;
+                    let db_result = service::Mutation::create_post(
+                        &state.db_conn,
+                        user_media::Model {
+                            id: 0,
+                            user_id: claims.user_id,
+                            media_id: id_full.to_string(),
+                            media_compressed_id: compressed_id.to_string(),
+                            status: "created".to_string(),
+                        },
+                    )
+                    .await;
+                    match db_result {
+                        Ok(s) => println!("{:?}", s),
+                        Err(e) => println!("{:?}", e),
+                    }
                     Ok(Json(format!(
                         "Uploaded image with description: {} and Size {:?} kb",
                         description,

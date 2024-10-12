@@ -176,7 +176,8 @@ services:
           cpus: "0.50"
           memory: 1024M
     environment:
-      postgresDsn: "user=bernardn password=password host=postgres port=5432 sslmode=disable"
+      postgresDsn: "postgres://bernardn:password@postgres:5432/media_service?sslmode=disable"
+
       jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
       port: ":8080"
       dbName: "media_service"
