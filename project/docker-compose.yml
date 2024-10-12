@@ -1,17 +1,22 @@
 volumes:
   postgres_data:
     driver: local
-
+  nginx_data:
+    driver: local
+  rabbit_data:
+    driver: local
+  minio_data:
+    driver: local
 services:
   nginx:
-    image: nginx:latest
+    image: nginx:1.27.2
     deploy:
       mode: replicated
       replicas: 1
       resources:
         limits:
           cpus: "0.50"
-          memory: 128M
+          memory: 528M
 
     restart: always
     volumes:
@@ -55,6 +60,56 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: "rabbitmq"
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq/
+      - rabbit_data:/var/log/rabbitmq/
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  minio:
+    image: minio/minio:latest
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.50"
+          memory: 256M
+    command: server --address ":9000" --console-address ":9001" /data
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
   auth-service:
     build:
       context: ../auth-service
@@ -72,6 +127,7 @@ services:
       jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
       port: ":8080"
       dbName: "auth_service"
+      rabbitmqURL: "amqp://guest:guest@rabbitmq"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/auth/health" ]
       interval: 60s # Time between health checks
@@ -79,3 +135,90 @@ services:
       retries: 3
     depends_on:
       - postgres
+      - rabbitmq
+  user-service:
+    build:
+      context: ../user-service
+      dockerfile: ./Dockerfile
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    environment:
+      postgresDsn: "user=bernardn password=password host=postgres port=5432 sslmode=disable"
+      jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
+      port: ":8080"
+      dbName: "user_service"
+      rabbitmqURL: "amqp://guest:guest@rabbitmq"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/user/health" ]
+      interval: 60s # Time between health checks
+      timeout: 10s # Timeout for a single health check
+      retries: 3
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  media-service:
+    build:
+      context: ../media-service
+      dockerfile: ./Dockerfile
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1024M
+    environment:
+      postgresDsn: "user=bernardn password=password host=postgres port=5432 sslmode=disable"
+      jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
+      port: ":8080"
+      dbName: "media_service"
+      rabbitmqURL: "amqp://guest:guest@rabbitmq"
+      minioID: "minio"
+      minioAccessKey: "minio123"
+      minioEndPoint: "minio:9000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/media/health" ]
+      interval: 60s # Time between health checks
+      timeout: 10s # Timeout for a single health check
+      retries: 3
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  media-compression-service:
+    build:
+      context: ../media-compression-service
+      dockerfile: ./Dockerfile
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1024M
+    environment:
+      postgresDsn: "user=bernardn password=password host=postgres port=5432 sslmode=disable"
+      jwtSecret: "qwertyuiopasdfghjklzxcvbnm123456qwertyuiopasdfghjklzxcvbnm123456"
+      port: ":8080"
+      dbName: "media_compression_service"
+      rabbitmqURL: "amqp://guest:guest@rabbitmq"
+      minioID: "minio"
+      minioAccessKey: "minio123"
+      minioEndPoint: "minio:9000"
+    # healthcheck:
+    #   test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/media/health" ]
+    #   interval: 60s # Time between health checks
+    #   timeout: 10s # Timeout for a single health check
+    #   retries: 3
+    depends_on:
+      - postgres
+      - rabbitmq

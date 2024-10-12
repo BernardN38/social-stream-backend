@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -73,7 +72,7 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	userId, err := h.Service.LoginUser(r.Context(), loginUserPayload)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	tokenString, err := h.TokenManager.CreateToken(userId)
@@ -84,5 +83,5 @@ func (h *Handler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	cookie := CreateJWTCookie(tokenString)
 	http.SetCookie(w, cookie)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%v", userId)))
+	// w.Write([]byte(fmt.Sprintf("%v", userId)))
 }

@@ -21,7 +21,7 @@ func NewRouter(h handler.HandlerInterface) *Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
-
+	r.Use(middleware.RequestSize(50 * 1024 * 1024))
 	r.Get("/api/v1/auth/health", h.CheckHealth)
 	r.Post("/api/v1/auth/register", h.RegisterUser)
 	r.Post("/api/v1/auth/login", h.LoginUser)

@@ -1,6 +1,19 @@
 [package]
-name = "media-compresssion-service"
+name = "media-compression-service"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+amqprs = "2.0.0"
+aws-config = "1.5.8"
+aws-sdk-s3 = "1.54.0"
+env_logger = "0.11.5"
+fast_image_resize = "5.0.0"
+image = "0.25.2"
+log = "0.4.22"
+serde = "1.0.210"
+serde_json = "1.0.128"
+simplelog = "0.12.2"
+tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread", "signal"] }
+turbojpeg = "1.1.1"
+uuid = "1.10.0"
