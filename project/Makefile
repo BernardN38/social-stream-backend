@@ -1,8 +1,8 @@
 AUTH_BINARY=authApp
 USER_BINARY=userApp
+POST_BINARY=postApp
 MEDIA_BINARY=mediaApp
 MEDIA_COMPRESSION_BINARY=mediaCompressionApp
-
 ## up_build: stops docker-compose (if running), builds all projects, and starts docker compose
 up_build: build_auth build_media build_user build_media_compression
 	@echo "Stopping docker images (if running...)"
@@ -12,11 +12,11 @@ up_build: build_auth build_media build_user build_media_compression
 	@echo "Docker images built and started!"
 
 ## up_build: stops docker-compose (if running), builds all projects, and starts docker compose
-up_build_services: build_auth build_user build_media build_media_compression
+up_build_services: build_auth build_user build_media build_media_compression build_post
 	@echo "Stopping docker images (if running...)"
-	docker compose down nginx auth-service user-service media-service media-compression-service
+	docker compose down nginx auth-service user-service media-service media-compression-service post-service
 	@echo "Building (when required) and starting docker images..."
-	docker compose up --build nginx auth-service user-service media-service media-compression-service
+	docker compose up --build nginx auth-service user-service media-service media-compression-service post-service
 	@echo "Docker images built and started!"
 	
 ## build_auth: builds the authentication service binary as a linux executable
@@ -30,6 +30,12 @@ build_auth:
 build_user:
 	@echo "Building user service binary..."
 	cd ../user-service && env GOOS=linux CGO_ENABLED=0 go build -o ${USER_BINARY} ./cmd/api
+	@echo "Done!"
+
+## build_user: builds the user service binary as a linux executable
+build_post:
+	@echo "Building post service binary..."
+	cd ../post-service && env GOOS=linux CGO_ENABLED=0 go build -o ${POST_BINARY} ./cmd/api
 	@echo "Done!"
 
 

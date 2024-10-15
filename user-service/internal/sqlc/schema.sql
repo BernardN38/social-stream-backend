@@ -1,5 +1,4 @@
-CREATE TABLE users
-(
+CREATE TABLE users(
     id SERIAL PRIMARY KEY,
     username text NOT NULL UNIQUE,   
     email text NOT NULL UNIQUE,
